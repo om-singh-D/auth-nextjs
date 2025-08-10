@@ -1,33 +1,56 @@
 "use client";
 import Link from "next/link";
-import React from "react";
+import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-
+import toast from "react-hot-toast";
+import { set } from "mongoose";
 
 export default function LoginPage() {
+    const router = useRouter();
+
     const [user, setUser] = React.useState({
         email: "",
         password: ""
     });
 
+    const [loading, setLoading] = React.useState(false);
+    const [showPassword, setShowPassword] = React.useState(false);
+    const [buttonDisabled, setButtonDisabled] = React.useState(false);
+
     const onLogin = async () => {
         try {
-            // TODO: Add login API call here
-            console.log("Login attempt:", user);
-            
-        } catch (error) {
-            console.log("Login failed:", error);
+            setLoading(true);
+            const response = await axios.post("/api/users/login", user);
+            console.log("Login Response:", response.data);
+            if (response.status === 200) {
+                toast.success("Login successful");
+                router.push("/profile");
+            }
+        } catch (error: any) {
+            console.log("Login error:", error);
+            toast.error(error.message || "An error occurred during login");
+        }finally{
+            setLoading(false);
         }
     }
 
+    useEffect(() => {
+        if (user.email.length > 0 && user.password.length > 0) {
+            setButtonDisabled(false);
+        }else{
+            setButtonDisabled(true);
+        }
+    }, [user]);
+
+    
     return (
         <div className="min-h-screen bg-black flex items-center justify-center px-4">
             <div className="max-w-md w-full space-y-8">
                 {/* Header */}
                 <div className="text-center">
                     <h2 className="text-4xl font-bold text-white mb-2">Welcome Back</h2>
-                    <p className="text-gray-400">Sign in to your account</p>
+                    <p className="text-gray-400">{loading ? "Loading..." : "Sign in to your account"}</p>
                 </div>
 
                 {/* Form */}
