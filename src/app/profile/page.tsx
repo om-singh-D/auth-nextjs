@@ -1,14 +1,16 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import axios from "axios";
+import Link from "next/link";
 
 export default function ProfilePage() {
     const router = useRouter();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
-
+    const [data, setData] = useState("nothing");
+    const [isLoading, setIsLoading] = useState(true);
     const handleLogout = async () => {
         try {
             setIsLoggingOut(true);
@@ -27,6 +29,76 @@ export default function ProfilePage() {
             setIsLoggingOut(false);
         }
     };
+    // const getUserDetails = async () => {
+    //     const response = await axios.get("/api/users/me");
+    //     if (response.status !== 200) {
+    //         throw new Error("Failed to fetch user details");
+    //     }
+    //     console.log("User details fetched successfully");
+    //     console.log(response.data);
+    //     setData(response.data.data._id);
+    // }
+    const getUserDetails = async () => {
+    try {
+        setIsLoading(true);
+        const response = await axios.get("/api/users/me");
+        console.log("Full response:", response);
+        console.log("Response data:", response.data);
+        console.log("Response status:", response.status);
+        
+        if (response.status !== 200) {
+            throw new Error("Failed to fetch user details");
+        }
+
+        // Handle different possible response structures
+        let userId = null;
+        
+        if (response.data) {
+            // Check for user object with _id (this is your actual structure)
+            if (response.data.user && response.data.user._id) {
+                userId = response.data.user._id;
+            }
+            // Check for user object with id
+            else if (response.data.user && response.data.user.id) {
+                userId = response.data.user.id;
+            }
+            // Check for nested data structure
+            else if (response.data.data && response.data.data._id) {
+                userId = response.data.data._id;
+            }
+            // Check for direct _id property
+            else if (response.data._id) {
+                userId = response.data._id;
+            }
+            // Check for id property instead of _id
+            else if (response.data.id) {
+                userId = response.data.id;
+            }
+            // Check for nested id
+            else if (response.data.data && response.data.data.id) {
+                userId = response.data.data.id;
+            }
+        }
+
+        if (userId) {
+            setData(userId);
+            toast.success("User details fetched successfully");
+        } else {
+            console.error("No user ID found in response:", response.data);
+            toast.error("No user ID found in response");
+        }
+    } catch (error) {
+        console.error("Error fetching user details:", error);
+        toast.error("Failed to fetch user details");
+    } finally {
+        setIsLoading(false);
+    }
+};
+
+    // Automatically fetch user details when component mounts
+    useEffect(() => {
+        getUserDetails();
+    }, []);
 
     return (
         <div className="min-h-screen bg-gray-50 py-8">
@@ -35,6 +107,15 @@ export default function ProfilePage() {
                 <div className="bg-white shadow rounded-lg mb-6">
                     <div className="px-6 py-4 flex justify-between items-center border-b border-gray-200">
                         <h1 className="text-2xl font-bold text-gray-900">User Profile</h1>
+                        <h2 className="text-lg text-gray-700">
+                            User ID: {isLoading ? (
+                                <span className="text-gray-500">Loading...</span>
+                            ) : data === "nothing" ? (
+                                <span className="text-red-500">Not found</span>
+                            ) : (
+                                <Link href={`/profile/${data}`}>{data}</Link>
+                            )}
+                        </h2>
                         <button
                             onClick={handleLogout}
                             disabled={isLoggingOut}
